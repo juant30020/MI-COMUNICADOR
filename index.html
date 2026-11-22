@@ -253,10 +253,19 @@ const EMOCIONES = [
   w("Feliz","descarga.jfif","Feli _).mp4"),
   w("Triste","Triste.jpg","Triste _c_.mp4"),
   w("Enojada","enojada.jpg","Enojada.mp4"),
-  w("Asustada","images.jpeg","Asustada.mp4"),
+  w("Asustada","","Asustada.mp4"),
   w("Frío","frio.avif","Frío.mp4"),
   w("Calor","calor.jpg","Calor.mp4"),
   w("Dolor","dolor.jpg","Dolor.mp4")
+];
+
+/* --- Familia y personas cercanas --- */
+const FAMILIA = [
+  w("Mamá","WhatsApp Image 2026-11-17 at 20.04.23.jpeg","Mamá_.mp4"),
+  w("Papá","WhatsApp Image 2026-11-17 at 5.01.23 PM.jpeg","Papá_.mp4"),
+  w("Yo","WhatsApp Image 2026-11-14 at 12.01.19.jpeg","Yo.mp4"),
+  w("Profesora","IMG_20261118_192719.jpg","Profesora_.mp4"),
+  w("Mediadora","IMG_20261118_192751.jpg","")
 ];
 
 /* --- Colegio y aprendizaje --- */
@@ -298,6 +307,7 @@ const EXPRESIONES = [
 const CATEGORIAS = [
  {id:"necesidades", nombre:"Necesidades básicas y autocuidado", color:"#ff6fa5", items:NECESIDADES, portada:NECESIDADES[0].img},
  {id:"emociones",   nombre:"Emociones y sensaciones",           color:"#ffa24c", items:EMOCIONES,   portada:EMOCIONES[0].img},
+ {id:"familia",     nombre:"Familia y personas cercanas",       color:"#3fcf9b", items:FAMILIA,     portada:FAMILIA[0].img},
  {id:"colegio",     nombre:"Colegio y aprendizaje",             color:"#a77bff", items:COLEGIO,     portada:COLEGIO[4].img},
  {id:"expresiones", nombre:"Expresiones comunicativas",         color:"#4db8e8", items:EXPRESIONES, portada:EXPRESIONES[10].img}
 ];
@@ -310,6 +320,8 @@ const RAPIDAS = [
   {label:"Quiero",    color:"#4d96ff"},
   {label:"No quiero", color:"#a77bff"}
 ].map(r => ({...EXPRESIONES.find(i=>i.label===r.label), color:r.color}));
+
+
 
 
 
