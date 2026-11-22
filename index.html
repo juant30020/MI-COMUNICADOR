@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#ff9ec7">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="application-name" content="Mi Comunicador">
+<meta name="apple-mobile-web-app-title" content="Comunicador">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="description" content="Comunicación alternativa con imágenes y señas en LSC. Funciona sin internet.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Mi Comunicador</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap" media="print" onload="this.media='all'">
+<style>
+  :root{
+    --bg:#ffe4ef; --ink:#4a2a45; --card:#ffffff; --shadow:0 6px 18px rgba(214,70,140,.22);
+    --quick:#4a2545; --bar-h:96px; --rosa:#ff6fa5; --rosa-claro:#ffc2da;
+    --gap:clamp(10px,2vw,18px); --pad:clamp(10px,2.5vw,24px);
+    --fuente:"Fredoka","Baloo 2","Nunito","Trebuchet MS","Segoe UI",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+  html,body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font-family:var(--fuente);
+    -webkit-user-select:none;user-select:none;touch-action:manipulation;overscroll-behavior-y:none}
+  body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right);overflow-x:hidden}
+  img,video{max-width:100%}
+  button{font:inherit;color:inherit}
+  :focus-visible{outline:5px solid #7a4dff;outline-offset:3px}
+
+  /* ---------- fondo rosa con cositas flotando ---------- */
+  #fondo{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;
+    background:radial-gradient(circle at 20% 10%,#fff1f7 0,transparent 45%),
+               radial-gradient(circle at 85% 90%,#ffd6ea 0,transparent 50%),
+               linear-gradient(180deg,#ffe0ee 0%,#ffcfe4 55%,#ffe6f1 100%)}
+  .flotantes{position:absolute;inset:0;transition:opacity .5s}
+  body[data-vista="detalle"] .flotantes{opacity:.22}     /* en la pantalla individual hay menos distracción */
+  .fl{position:absolute;bottom:-70px;line-height:1;will-change:transform,opacity;
+    animation:subir var(--dur,20s) linear var(--del,0s) infinite}
+  @keyframes subir{
+    0%{transform:translate3d(0,0,0) rotate(0);opacity:0}
+    8%{opacity:.95}
+    50%{transform:translate3d(var(--dx),-55vh,0) rotate(calc(var(--rot)/2))}
+    92%{opacity:.95}
+    100%{transform:translate3d(calc(var(--dx) * -.6),-118vh,0) rotate(var(--rot));opacity:0}}
+
+  #app{position:relative;z-index:1;max-width:1500px;margin:0 auto;
+    padding:var(--pad) var(--pad) calc(var(--bar-h) + env(safe-area-inset-bottom) + 24px)}
+
+  /* ---------- encabezado ---------- */
+  header{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:var(--gap);min-height:60px;
+    animation:bajar .6s cubic-bezier(.2,1.2,.4,1) backwards}
+  @keyframes bajar{from{transform:translateY(-30px);opacity:0}}
+  @media (min-height:640px){
+    header{position:sticky;top:0;z-index:5;padding:8px 10px;margin:-8px -10px var(--gap);border-radius:0 0 26px 26px;
+      background:linear-gradient(180deg,rgba(255,224,238,.97),rgba(255,224,238,.8))}
+  }
+  header h1{font-size:clamp(20px,4.6vw,38px);margin:0;flex:1 1 200px;line-height:1.15;font-weight:700}
+  header h1 .grad{background:linear-gradient(90deg,#ff4f9a,#a77bff);-webkit-background-clip:text;background-clip:text;
+    color:transparent;-webkit-text-fill-color:transparent}
+  header h1 .em{display:inline-block;animation:latido 1.6s ease-in-out infinite}
+  .nav-btn{border:3px solid var(--rosa-claro);border-radius:22px;padding:10px clamp(14px,3vw,24px);font-size:clamp(17px,3.4vw,23px);font-weight:700;
+    background:#fff;box-shadow:var(--shadow);cursor:pointer;min-height:60px;color:var(--ink);
+    display:inline-flex;align-items:center;justify-content:center;gap:8px;transition:transform .15s}
+  .nav-btn:active,.tile:active,#quick button:active{transform:scale(.95)}
+  .nav-btn.square{min-width:60px;padding:10px}
+  @keyframes latido{0%,100%{transform:scale(1)}50%{transform:scale(1.25)}}
+
+  /* ---------- cuadrículas ---------- */
+  .grid{display:grid;gap:var(--gap);
+    grid-template-columns:repeat(auto-fill,minmax(min(100%,clamp(140px,42vw,300px)),1fr))}
+  .tile{position:relative;background:var(--card);border:6px solid var(--c,#ccc);border-radius:28px;
+    box-shadow:0 6px 0 color-mix(in srgb,var(--c,#ccc) 55%,white),var(--shadow);
+    padding:10px;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;
+    gap:8px;cursor:pointer;text-align:center;min-width:0;align-self:stretch;transition:transform .15s;
+    animation:pop .6s cubic-bezier(.2,1.5,.4,1) backwards;animation-delay:calc(min(var(--i,0),12) * .07s + .05s)}
+  .tile::after{content:"✨";position:absolute;top:-12px;right:-6px;font-size:26px;
+    animation:brillo 2.6s ease-in-out infinite;animation-delay:calc(var(--i,0) * .35s)}
+  @keyframes pop{from{transform:translateY(40px) scale(.55) rotate(-4deg);opacity:0}}
+  @keyframes brillo{0%,100%{transform:scale(.7) rotate(0);opacity:.35}50%{transform:scale(1.25) rotate(25deg);opacity:1}}
+  @media (hover:hover){ .tile:hover{transform:translateY(-4px) rotate(-1deg)} }
+  .pic{position:relative}
+  .pic img,.pic .nofoto{position:absolute;inset:0;width:100%;height:100%}
+  .pic img{object-fit:contain;object-position:center;display:block;padding:4px}
+  .tile .pic{width:100%;aspect-ratio:4/3;background:#fff;border-radius:18px;overflow:hidden;
+    box-shadow:inset 0 0 0 3px color-mix(in srgb,var(--c,#ccc) 30%,white)}
+  .tile .name{font-size:clamp(16px,3.6vw,24px);font-weight:700;line-height:1.15;
+    min-height:2.3em;display:flex;align-items:center;justify-content:center;overflow-wrap:break-word;hyphens:auto}
+  .cat .name{font-size:clamp(15px,3.4vw,22px)}
+
+  /* ---------- pantalla individual ---------- */
+  .detail{display:grid;gap:var(--gap);grid-template-columns:minmax(0,1fr);max-width:1200px;margin:0 auto;
+    animation:pop .5s cubic-bezier(.2,1.3,.4,1) backwards}
+  .big{background:var(--card);border:8px solid var(--c);border-radius:34px;box-shadow:var(--shadow);
+    padding:clamp(10px,2vw,20px);text-align:center;cursor:pointer;min-width:0}
+  .big .pic{width:100%;aspect-ratio:4/3;max-height:48dvh;margin:0 auto;background:#fff;border-radius:22px;overflow:hidden}
+  .big .word{font-size:clamp(36px,11vw,92px);font-weight:700;letter-spacing:1px;margin-top:10px;
+    text-transform:uppercase;line-height:1.05;overflow-wrap:anywhere}
+  .big .hint{font-size:clamp(14px,2.6vw,18px);opacity:.7;margin-top:4px}
+  .side{display:grid;gap:var(--gap);align-content:start;min-width:0}
+  .lsc{background:var(--card);border-radius:30px;box-shadow:var(--shadow);padding:clamp(10px,2vw,18px);text-align:center;
+    border:4px solid var(--rosa-claro)}
+  .lsc h2{margin:0 0 10px;font-size:clamp(18px,3.4vw,24px)}
+  .vidbox{width:100%;min-height:150px;background:#fff0f7;border-radius:18px;overflow:hidden;
+    display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;color:#7a4a6e;padding:8px}
+  .vidbox video{display:block;width:100%;max-height:min(55dvh,560px);background:#000;border-radius:14px;object-fit:contain}
+  .vidbox .ph{font-size:48px}
+  .vidbox small{font-size:clamp(14px,2.6vw,17px);line-height:1.3;padding:0 8px}
+  .actions{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:12px}
+  .actions .nav-btn{flex:1 1 150px}
+  .primary{background:linear-gradient(180deg,#ff8fbd,#ff5fa2);color:#fff;border-color:#ff9cc6}
+  .sound{background:linear-gradient(180deg,#46d391,#25b673);color:#fff;border-color:#8be8bd}
+  .nofoto{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+    font-size:clamp(20px,4vw,34px);font-weight:700;color:#8a5a80;background:#fff0f7;text-align:center;padding:8px;overflow-wrap:anywhere}
+  .nofoto small{font-size:14px;font-weight:500;opacity:.75}
+
+  /* pantallas anchas o celular horizontal: imagen a la izquierda, seña a la derecha */
+  @media (min-width:820px) and (orientation:landscape), (max-height:560px) and (orientation:landscape){
+    .detail{grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start}
+    .big .pic{max-height:calc(100dvh - 250px);min-height:140px}
+    .big .word{font-size:clamp(30px,6vw,76px)}
+    .vidbox video{max-height:calc(100dvh - 250px)}
+  }
+  @media (max-height:560px) and (orientation:landscape){
+    :root{--bar-h:64px}
+    .nav-btn{min-height:52px;padding:8px 14px;font-size:17px}
+    .big{border-width:6px;padding:8px}
+    .big .hint{display:none}
+    .lsc h2{display:none}
+    .big .pic{max-height:calc(100dvh - 225px);min-height:100px}
+    .big .word{font-size:clamp(28px,7vw,44px);margin-top:4px}
+    .vidbox video{max-height:calc(100dvh - 190px)}
+    .grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+    .tile .pic{aspect-ratio:16/10}
+    .tile .name,.cat .name{min-height:0;font-size:clamp(14px,2.3vw,18px)}
+  }
+
+  /* ---------- PORTADA ---------- */
+  .portada{position:relative;display:flex;align-items:center;justify-content:center;text-align:center;
+    min-height:calc(100dvh - var(--pad) - var(--bar-h) - env(safe-area-inset-bottom) - 24px);
+    transition:transform .45s ease,opacity .45s ease}
+  .portada.adios{transform:scale(1.15);opacity:0}
+  .portada .centro{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;gap:clamp(14px,4vh,36px);
+    animation:entrar .9s cubic-bezier(.2,1.3,.4,1) backwards}
+  @keyframes entrar{from{transform:scale(.5) translateY(40px);opacity:0}}
+  .lazo{font-size:clamp(40px,10vh,84px);line-height:1;animation:balanceo 3s ease-in-out infinite;transform-origin:50% 90%}
+  @keyframes balanceo{0%,100%{transform:rotate(-8deg) scale(1)}50%{transform:rotate(8deg) scale(1.12)}}
+  .titulo{margin:0;display:flex;flex-direction:column;align-items:center;line-height:1;font-weight:700;white-space:nowrap}
+  .titulo .linea{display:block;font-size:clamp(30px,min(10.5vw,16vh),124px);letter-spacing:.02em}
+  .titulo .linea.chica{font-size:clamp(26px,min(8vw,12vh),90px);margin-bottom:.06em}
+  .titulo .l{display:inline-block;color:var(--k);
+    text-shadow:0 .05em 0 #fff,0 .09em 0 rgba(214,70,140,.35),0 .16em .25em rgba(214,70,140,.25);
+    animation:onda 2.6s ease-in-out infinite;animation-delay:calc(var(--n) * .09s)}
+  @keyframes onda{0%,55%,100%{transform:translateY(0) rotate(0)}25%{transform:translateY(-.16em) rotate(-4deg)}40%{transform:translateY(-.05em) rotate(3deg)}}
+  .bienvenida{position:relative;border:6px solid #fff;border-radius:999px;cursor:pointer;
+    padding:clamp(12px,2.4vh,20px) clamp(26px,7vw,64px);min-height:68px;
+    font-size:clamp(24px,min(7vw,5vh),44px);font-weight:700;color:#fff;letter-spacing:.02em;
+    background:linear-gradient(180deg,#ff9cc6 0%,#ff5fa2 60%,#ff4f9a 100%);
+    box-shadow:0 8px 0 #d6358a,0 16px 28px rgba(214,53,138,.4);
+    text-shadow:0 2px 0 rgba(160,20,90,.45);
+    animation:pulso 1.8s ease-in-out infinite;transition:transform .12s}
+  .bienvenida:active{transform:translateY(6px) scale(.97);box-shadow:0 2px 0 #d6358a,0 6px 12px rgba(214,53,138,.4)}
+  .bienvenida .c{display:inline-block;animation:latido 1.4s ease-in-out infinite}
+  .bienvenida::before,.bienvenida::after{content:"✨";position:absolute;font-size:.55em;animation:brillo 2s ease-in-out infinite}
+  .bienvenida::before{left:-.5em;top:-.35em}
+  .bienvenida::after{right:-.4em;bottom:-.3em;animation-delay:1s}
+  @keyframes pulso{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
+  .nubes{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+  .nube{position:absolute;font-size:clamp(46px,10vw,110px);opacity:.9;animation:deriva var(--t,40s) linear infinite;animation-delay:var(--d,0s)}
+  @keyframes deriva{from{transform:translateX(-30vw)}to{transform:translateX(130vw)}}
+  .portada .fs-abs{position:absolute;top:0;right:0;z-index:2}
+
+  /* confeti al tocar «Bienvenidos» */
+  .conf{position:fixed;z-index:50;pointer-events:none;animation:conf 1.2s cubic-bezier(.2,.8,.3,1) forwards}
+  @keyframes conf{
+    0%{transform:translate(-50%,-50%) scale(.3) rotate(0);opacity:1}
+    80%{opacity:1}
+    100%{transform:translate(calc(-50% + var(--tx)),calc(-50% + var(--ty))) scale(1.1) rotate(var(--r));opacity:0}}
+
+  /* ---------- barra rápida ---------- */
+  #quick{position:fixed;left:0;right:0;bottom:0;background:var(--quick);z-index:10;border-radius:26px 26px 0 0;
+    box-shadow:0 -6px 20px rgba(120,30,90,.3);
+    padding:8px calc(8px + env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) calc(8px + env(safe-area-inset-left));
+    display:flex;gap:clamp(6px,1.5vw,12px);justify-content:center}
+  #quick button{flex:1 1 0;min-width:0;max-width:220px;border:3px solid rgba(255,255,255,.55);border-radius:18px;padding:6px 2px;color:#fff;
+    font-weight:700;font-size:clamp(12px,3.2vw,20px);cursor:pointer;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:3px;min-height:72px;line-height:1.1;text-align:center;transition:transform .12s;
+    text-shadow:0 1px 0 rgba(0,0,0,.25)}
+  #quick button .qi{width:clamp(34px,8vw,48px);height:clamp(34px,8vw,48px);border-radius:12px;background:#fff;
+    overflow:hidden;display:flex;align-items:center;justify-content:center}
+  #quick button .qi img{width:100%;height:100%;object-fit:cover}
+  @media (max-height:560px) and (orientation:landscape){
+    #quick button{flex-direction:row;gap:8px;min-height:48px;font-size:16px}
+    #quick button .qi{width:34px;height:34px;flex:none}
+  }
+  @media (max-width:600px){ #fs{display:none} }
+  .portada .inst-abs{position:absolute;top:0;left:0;z-index:2}
+  #estado{position:fixed;left:50%;bottom:calc(var(--bar-h) + env(safe-area-inset-bottom) + 12px);z-index:30;
+    transform:translate(-50%,20px);opacity:0;pointer-events:none;max-width:calc(100vw - 24px);text-align:center;
+    background:#fff;color:var(--ink);font-weight:600;font-size:clamp(14px,3.4vw,18px);padding:10px 18px;border-radius:999px;
+    border:3px solid var(--rosa-claro);box-shadow:var(--shadow);transition:opacity .3s,transform .3s}
+  #estado.ver{opacity:1;transform:translate(-50%,0)}
+  .velo{position:fixed;inset:0;z-index:60;background:rgba(74,37,69,.55);display:flex;align-items:center;justify-content:center;padding:20px}
+  .velo .caja{background:#fff;border-radius:28px;border:6px solid var(--rosa-claro);padding:22px;max-width:460px;text-align:center;
+    font-size:clamp(17px,4vw,22px);line-height:1.35;animation:pop .4s cubic-bezier(.2,1.5,.4,1)}
+  .velo .caja p{margin:0 0 16px}
+  .hide{display:none!important}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body data-vista="portada">
+<div id="fondo" aria-hidden="true"><div class="flotantes" id="flotantes"></div></div>
+<div id="app"></div>
+<nav id="quick" aria-label="Expresiones rápidas"></nav>
+
+<script>
+/* ============================================================
+   VOCABULARIO - todas las fotos y videos están en la MISMA carpeta
+   que este archivo (raíz del sitio, ideal para GitHub Pages).
+   w(palabra, foto, video)
+   - foto vacía ""  -> muestra el aviso "falta foto"
+   - video vacío "" -> muestra el aviso "falta video"
+   ============================================================ */
+const w = (label, img="", video="") => ({
+  label,
+  img:   img   ? encodeURI(img)   : "",
+  video: video ? encodeURI(video) : "",
+  audio: ""
+});
+
+/* --- Necesidades básicas --- */
+const NECESIDADES = [
+  w("Baño","rollo de papel.png","Baño.mp4"),
+  w("Agua","agua.png","Agua.mp4"),
+  w("Comer","comer.png","Comer.mp4"),
+  w("Hambre","hambre.jpg","Hambre.mp4"),
+  w("Sed","sed.jpg","VID_20261115_203000285.mp4"),
+  w("Dormir","Dormir.jpg","Dormir_.mp4"),
+  w("Bañarse","enjabonar el cuerpo.png","VID_20261115_203944025.mp4"),
+  w("Lavarse las manos","lavado de manos.png","Lavarse las manos_.mp4"),
+  w("Cepillarse los dientes","cepillar los dientes.png","Cepillarse los dientes_.mp4"),
+  w("Vestirse","poner el abrigo.png","VID_20261115_203359485.mp4"),
+  w("Quitarse la ropa","quitar el abrigo.png","VID_20261115_203503695.mp4")
+];
+
+/* --- Emociones y sensaciones --- */
+const EMOCIONES = [
+  w("Feliz","descarga.jfif","Feli _).mp4"),
+  w("Triste","Triste.jpg","Triste _c_.mp4"),
+  w("Enojada","enojada.jpg","Enojada.mp4"),
+  w("Asustada","","Asustada.mp4"),
+  w("Frío","frio.avif","Frío.mp4"),
+  w("Calor","calor.jpg","Calor.mp4"),
+  w("Dolor","dolor.jpg","Dolor.mp4")
+];
+
+/* --- Colegio y aprendizaje --- */
+const COLEGIO = [
+  w("Colegio","COLEGIO DISTRITAL REPUBLICA DOMINICANA BOGOTÁ.jpg.webp","Colegio_.mp4"),
+  w("Salón","WhatsApp Image 2026-11-17 at 4.30.58 PM.jpeg","Salón de clases_.mp4"),
+  w("Cuaderno","images (2).jfif","Cuaderno_.mp4"),
+  w("Lápiz","titulo-goma-borrar-metalica-lapiz-amarillo-punta-grafito-afilada-aislada-sobre-fondo-transparente_943194-28338.avif","Lápiz_.mp4"),
+  w("Libro","istockphoto-1911187556-612x612.jpg","Libro_.mp4"),
+  w("Colores","61935901-colorful-pencils-isolated-on-white.jpg","Colores_.mp4"),
+  w("Maleta","images (3).jfif","Maleta_.mp4"),
+  w("Mesa","images (4).jfif","Mesa.mp4"),
+  w("Silla","WhatsApp Image 2026-11-17 at 4.57.13 PM.jpeg","Silla.mp4"),
+  w("Tablero","tablero_pedestal_rodante_giratorio-01.jpg","Tablero_.mp4"),
+  w("Leer","istockphoto-1957612313-612x612.jpg","Leer.mp4"),
+  w("Dibujar","little-girl-drawing-colorful-pencils-260nw-2755830339.webp","Dibujar_.mp4")
+];
+
+/* --- Expresiones comunicativas --- */
+const EXPRESIONES = [
+  w("Sí","Imágen Si .jpeg","Si .mp4"),
+  w("No","Imagen No .jpeg","No .mp4"),
+  w("Quiero","Imagen Quiero .jpeg","Quiero- Necesito.mp4"),
+  w("No quiero","Imagen No quiero .jpeg","No Quiero .mp4"),
+  w("Ayuda","Imagen Ayuda .jpeg","Ayuda.mp4"),
+  w("Terminé","Imagen Termine .jpeg","Termine - Terminar .mp4"),
+  w("Mucho","Imagen Mucho .jpeg","Mucho.mp4"),
+  w("Poco","Imagen Poco.jpg","Poco- poquito.mp4"),
+  w("Esperar","Imagen Esperar.jpeg","Esperar.mp4"),
+  w("Otra vez","Imagen Repetir.jpeg","Repetir.mp4"),
+  w("Hola","Imagen Hola.jpeg","Hola .mp4"),
+  w("Adiós","Imagen Adiós.jpeg","Adiós .mp4"),
+  w("Gracias","Imagen Gracias.jpeg","Gracias .mp4"),
+  w("Por favor","Imagen Por favor.jpeg","Por Favor .mp4"),
+  w("Perdón","Imagen Perdón.jpeg","Perdón .mp4"),
+  w("Para","Imagen Parar.jpg","Parar - Para .mp4")
+];
+
+const CATEGORIAS = [
+ {id:"necesidades", nombre:"Necesidades básicas y autocuidado", color:"#ff6fa5", items:NECESIDADES, portada:NECESIDADES[0].img},
+ {id:"emociones",   nombre:"Emociones y sensaciones",           color:"#ffa24c", items:EMOCIONES,   portada:EMOCIONES[0].img},
+ {id:"colegio",     nombre:"Colegio y aprendizaje",             color:"#a77bff", items:COLEGIO,     portada:COLEGIO[4].img},
+ {id:"expresiones", nombre:"Expresiones comunicativas",         color:"#4db8e8", items:EXPRESIONES, portada:EXPRESIONES[10].img}
+];
+
+/* Expresiones esenciales, siempre visibles (barra inferior) */
+const RAPIDAS = [
+  {label:"Sí",        color:"#3cc47c"},
+  {label:"No",        color:"#ff6b6b"},
+  {label:"Ayuda",     color:"#ffa21f"},
+  {label:"Quiero",    color:"#4d96ff"},
+  {label:"No quiero", color:"#a77bff"}
+].map(r => ({...EXPRESIONES.find(i=>i.label===r.label), color:r.color}));
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* ============================ ESTADO ============================ */
+const app   = document.getElementById("app");
+const quick = document.getElementById("quick");
+const $ = id => document.getElementById(id);
+let hablaTimer = null, voz = null;
+let actual = "", previo = "";
+
+/* ============================ FONDO ANIMADO ============================ */
+(function fondo(){
+  const cosas = ["💖","🌸","⭐","✨","🦋","🎀","💗","🌷","☁️","🌈","🍭","🧸"];
+  const caja = document.getElementById("flotantes");
+  const N = 18;
+  for(let i=0;i<N;i++){
+    const s = document.createElement("span"); s.className = "fl";
+    s.textContent = cosas[i % cosas.length];
+    const dx = (Math.random()*160-80).toFixed(0)+"px";
+    s.style.cssText = `left:${((i*100/N)+Math.random()*4).toFixed(1)}%;font-size:${(20+Math.random()*26).toFixed(0)}px;`+
+      `--dx:${dx};--rot:${(Math.random()*120-60).toFixed(0)}deg;--dur:${(16+Math.random()*14).toFixed(1)}s;--del:-${(Math.random()*28).toFixed(1)}s`;
+    caja.appendChild(s);
+  }
+})();
+
+/* ============================ VOZ ============================ */
+function elegirVoz(){
+  try{
+    const v = speechSynthesis.getVoices();
+    voz = v.find(x=>x.lang==="es-CO") || v.find(x=>x.lang==="es-MX") ||
+          v.find(x=>x.lang==="es-US") || v.find(x=>x.lang.toLowerCase().startsWith("es")) || null;
+  }catch(e){}
+}
+if ("speechSynthesis" in window){ elegirVoz(); speechSynthesis.onvoiceschanged = elegirVoz; }
+
+function detenerVoz(){
+  clearTimeout(hablaTimer);
+  try{ if("speechSynthesis" in window) speechSynthesis.cancel(); }catch(e){}
+}
+
+/* Dice la palabra "veces" veces, con una pausa breve entre cada una */
+function decir(texto, veces=1, pausa=900){
+  if(!("speechSynthesis" in window)) return;
+  detenerVoz();
+  let n = 0;
+  const siguiente = () => {
+    const u = new SpeechSynthesisUtterance(texto);
+    u.lang = voz ? voz.lang : "es-CO"; if(voz) u.voice = voz;
+    u.rate = 0.8;
+    u.onend = () => { n++; if(n<veces) hablaTimer = setTimeout(siguiente, pausa); };
+    speechSynthesis.speak(u);
+  };
+  hablaTimer = setTimeout(siguiente, 80);   /* pequeña espera tras cancelar: evita que Chrome ignore la voz */
+}
+
+/* ============================ IMÁGENES ============================ */
+function falta(label){
+  return `<div class="nofoto">${label}<small>📷 falta foto</small></div>`;
+}
+function imagen(it){
+  return it.img
+    ? `<img src="${it.img}" alt="${it.label}" loading="lazy" decoding="async" onerror="this.parentNode.innerHTML=falta(this.alt)">`
+    : falta(it.label);
+}
+
+/* ============================ NAVEGACIÓN (el botón "atrás" del celular funciona) ============================
+   #/            -> portada de bienvenida
+   #/categorias  -> las categorías
+   #/c/<id>      -> galería de una categoría
+   #/c/<id>/<n>  -> pantalla individual
+   #/q/<n>       -> expresión rápida (barra de abajo)                                                    */
+function go(h){ if(location.hash === h) render(); else location.hash = h; }
+
+function render(){
+  const h = location.hash || "#/";
+  if(h !== actual){ previo = actual; actual = h; }
+  const p = h.split("/");
+  detenerVoz();
+  if(p[1]==="categorias") return vistaInicio();
+  if(p[1]==="c" && p[2]){
+    const c = CATEGORIAS.find(x=>x.id===p[2]);
+    if(!c) return vistaInicio();
+    if(p[3]!==undefined && c.items[p[3]]) return vistaDetalle(c.items[p[3]], c.color, "#/c/"+c.id, c);
+    return vistaCategoria(c);
+  }
+  if(p[1]==="q" && RAPIDAS[p[2]]){
+    const r = RAPIDAS[p[2]];
+    const volverA = (previo && previo.indexOf("#/q/")!==0) ? previo : "#/categorias";
+    return vistaDetalle(r, r.color, volverA, null);
+  }
+  vistaPortada();
+}
+window.addEventListener("hashchange", render);
+
+function pantallaCompletaBtn(){
+  return document.fullscreenEnabled
+    ? `<button class="nav-btn square" id="fs" aria-label="Pantalla completa">⛶</button>` : "";
+}
+function activarPantallaCompleta(){
+  const b = $("fs"); if(!b) return;
+  b.onclick = () => {
+    try{
+      if(document.fullscreenElement) document.exitFullscreen();
+      else document.documentElement.requestFullscreen();
+    }catch(e){}
+  };
+}
+
+/* ============================ VISTAS ============================ */
+const COLORES_TITULO = ["#ff4f9a","#ff8c42","#ffb800","#2fc4a0","#4d96ff","#a77bff"];
+function letras(texto, desde=0){
+  return [...texto].map((ch,i)=>`<span class="l" style="--n:${desde+i};--k:${COLORES_TITULO[(desde+i)%COLORES_TITULO.length]}">${ch}</span>`).join("");
+}
+
+function confeti(x, y){
+  const em = ["💖","🌸","⭐","✨","🦋","🎀","💗","🌷","🍭","🧸"];
+  for(let i=0;i<26;i++){
+    const s = document.createElement("span"); s.className = "conf"; s.textContent = em[i % em.length];
+    const a = Math.random()*Math.PI*2, d = 90 + Math.random()*Math.min(260, innerWidth*0.5);
+    s.style.cssText = `left:${x}px;top:${y}px;--tx:${(Math.cos(a)*d).toFixed(0)}px;--ty:${(Math.sin(a)*d-70).toFixed(0)}px;`+
+      `--r:${(Math.random()*720-360).toFixed(0)}deg;font-size:${(18+Math.random()*22).toFixed(0)}px`;
+    document.body.appendChild(s);
+    setTimeout(()=>s.remove(), 1300);
+  }
+}
+
+function vistaPortada(){
+  document.body.dataset.vista = "portada";
+  const nubes = [["☁️","8%","42s","-6s"],["☁️","55%","55s","-30s"],["☁️","78%","48s","-18s"]]
+    .map(n=>`<span class="nube" style="top:${n[1]};--t:${n[2]};--d:${n[3]}">${n[0]}</span>`).join("");
+  app.innerHTML = `
+    <section class="portada" id="portada">
+      <div class="nubes" aria-hidden="true">${nubes}</div>
+      <span class="inst-abs"><button class="nav-btn hide" id="instalar">📲 Instalar</button></span>
+      ${document.fullscreenEnabled ? `<span class="fs-abs"><button class="nav-btn square" id="fs" aria-label="Pantalla completa">⛶</button></span>` : ""}
+      <div class="centro">
+        <div class="lazo" aria-hidden="true">🎀</div>
+        <h1 class="titulo" aria-label="¡Mi Comunicador!">
+          <span class="linea chica" aria-hidden="true">${letras("¡MI",0)}</span>
+          <span class="linea" aria-hidden="true">${letras("COMUNICADOR!",3)}</span>
+        </h1>
+        <button class="bienvenida" id="entrar">Bienvenidos <span class="c">💖</span></button>
+      </div>
+    </section>`;
+  activarPantallaCompleta();
+  actualizarInstalar();
+  $("entrar").onclick = e => {
+    const r = e.currentTarget.getBoundingClientRect();
+    confeti(r.left + r.width/2, r.top + r.height/2);
+    $("portada").classList.add("adios");
+    setTimeout(()=> go("#/categorias"), 450);
+  };
+  window.scrollTo(0,0);
+}
+
+function vistaInicio(){
+  document.body.dataset.vista = "categorias";
+  app.innerHTML = `
+    <header><h1><span class="em">🌸</span> <span class="grad">¿Qué quieres decir?</span></h1>${pantallaCompletaBtn()}</header>
+    <div class="grid">
+      ${CATEGORIAS.map((c,i)=>`
+        <button class="tile cat" style="--c:${c.color};--i:${i}" data-cat="${c.id}">
+          <div class="pic">${imagen({img:c.portada,label:c.nombre})}</div>
+          <div class="name">${c.nombre}</div>
+        </button>`).join("")}
+    </div>`;
+  app.querySelectorAll("[data-cat]").forEach(b=> b.onclick = ()=> go("#/c/"+b.dataset.cat));
+  activarPantallaCompleta();
+  window.scrollTo(0,0);
+}
+
+function vistaCategoria(c){
+  document.body.dataset.vista = "galeria";
+  app.innerHTML = `
+    <header>
+      <button class="nav-btn" id="home">🏠 Inicio</button>
+      <h1><span class="grad">${c.nombre}</span></h1>
+      ${pantallaCompletaBtn()}
+    </header>
+    <div class="grid">
+      ${c.items.map((it,i)=>`
+        <button class="tile" style="--c:${c.color};--i:${i}" data-i="${i}">
+          <div class="pic">${imagen(it)}</div>
+          <div class="name">${it.label}</div>
+        </button>`).join("")}
+    </div>`;
+  $("home").onclick = ()=> go("#/categorias");
+  app.querySelectorAll("[data-i]").forEach(b=> b.onclick = ()=> go("#/c/"+c.id+"/"+b.dataset.i));
+  activarPantallaCompleta();
+  window.scrollTo(0,0);
+}
+
+function vistaDetalle(it, color, volverA, cat){
+  document.body.dataset.vista = "detalle";
+  const hayVideo = !!it.video;
+  app.innerHTML = `
+    <header>
+      <button class="nav-btn" id="back">⬅️ Volver</button>
+      <button class="nav-btn" id="home">🏠 Inicio</button>
+      <span style="flex:1"></span>
+      ${pantallaCompletaBtn()}
+    </header>
+    <div class="detail" style="--c:${color}">
+      <div class="big" id="big" role="button" tabindex="0" aria-label="Escuchar ${it.label}">
+        <div class="pic">${imagen(it)}</div>
+        <div class="word">${it.label}</div>
+        <div class="hint">🔊 Toca la imagen para escuchar</div>
+      </div>
+
+      <div class="side">
+        <div class="lsc">
+          <h2>🤟 Seña en LSC</h2>
+          <div class="vidbox" id="vidbox">
+            ${hayVideo
+              ? `<video id="vid" src="${it.video}" playsinline muted controls preload="auto"></video>`
+              : `<div class="ph">🎥</div><small>Falta el video de la seña «${it.label}».</small>`}
+          </div>
+          <div class="actions">
+            <button class="nav-btn primary ${hayVideo?"":"hide"}" id="repetir">🔁 Repetir video</button>
+            <button class="nav-btn ${hayVideo?"":"hide"}" id="lento">🐢 Lento: <span id="lentoEstado">sí</span></button>
+            <button class="nav-btn ${hayVideo?"":"hide"}" id="auto">♾️ Sin parar: <span id="autoEstado">no</span></button>
+            <button class="nav-btn sound" id="sonido">🔊 Escuchar</button>
+          </div>
+        </div>
+        <div class="actions" style="margin-top:0">
+          ${cat ? `<button class="nav-btn" id="mas">🖼️ Más imágenes</button>` : ""}
+          <button class="nav-btn" id="home2">🏠 Pantalla principal</button>
+        </div>
+      </div>
+    </div>`;
+
+  const hablar = ()=> decir(it.label, 1);
+  $("back").onclick = ()=> go(volverA);
+  $("home").onclick = $("home2").onclick = ()=> go("#/categorias");
+  if(cat) $("mas").onclick = ()=> go("#/c/"+cat.id);
+  const big = $("big");
+  big.onclick = hablar;
+  big.onkeydown = e => { if(e.key==="Enter"||e.key===" "){ e.preventDefault(); hablar(); } };
+  $("sonido").onclick = hablar;
+  activarPantallaCompleta();
+
+  if(hayVideo){
+    const v = $("vid");
+    let lento = true, auto = false;
+    const velocidad = ()=>{ v.playbackRate = lento ? 0.5 : 1; };
+    velocidad();
+    v.addEventListener("loadedmetadata", velocidad);
+    v.addEventListener("play", velocidad);
+    v.addEventListener("error", ()=>{
+      $("vidbox").innerHTML = `<div class="ph">⚠️</div><small>No se pudo abrir el video de «${it.label}». Revisa el nombre del archivo.</small>`;
+      ["repetir","lento","auto"].forEach(id=> $(id).classList.add("hide"));
+    });
+    $("repetir").onclick = ()=>{ v.currentTime = 0; velocidad(); v.play().catch(()=>{}); };
+    $("lento").onclick = ()=>{ lento = !lento; velocidad(); $("lentoEstado").textContent = lento?"sí":"no"; };
+    $("auto").onclick  = ()=>{ auto = !auto; v.loop = auto; $("autoEstado").textContent = auto?"sí":"no"; if(auto) v.play().catch(()=>{}); };
+    v.play().catch(()=>{});
+  }
+  window.scrollTo(0,0);
+  decir(it.label, 3, 1000);          /* al abrir: dice la palabra 3 veces con pausa */
+}
+
+/* ============================ BARRA RÁPIDA ============================ */
+quick.innerHTML = RAPIDAS.map((r,i)=>`
+  <button data-q="${i}" style="background:${r.color}" aria-label="${r.label}">
+    <span class="qi">${r.img?`<img src="${r.img}" alt="" onerror="this.remove()">`:""}</span>${r.label}</button>`).join("");
+quick.querySelectorAll("[data-q]").forEach(b=> b.onclick = ()=> go("#/q/"+b.dataset.q));
+
+/* La barra inferior mide distinto según el equipo: reservamos ese espacio al final de la página */
+function medirBarra(){ document.documentElement.style.setProperty("--bar-h", quick.offsetHeight+"px"); }
+window.addEventListener("resize", medirBarra);
+window.addEventListener("orientationchange", medirBarra);
+medirBarra();
+
+/* ============================ APP INSTALABLE Y SIN INTERNET (PWA) ============================
+   La primera vez, con internet, la app guarda TODAS las fotos y videos en el aparato.
+   Después abre y funciona igual sin conexión.
+   Si cambias una foto o video conservando el mismo nombre, sube el número de MEDIA_CACHE (v1 -> v2). */
+const MEDIA_CACHE = "mi-comunicador-media-v1";
+
+const aviso = (() => { const el = document.createElement("div"); el.id = "estado"; el.setAttribute("role","status");
+  document.body.appendChild(el); let t;
+  return (txt, ms) => { clearTimeout(t); if(txt) el.textContent = txt; el.classList.toggle("ver", !!txt);
+    if(txt && ms) t = setTimeout(()=>el.classList.remove("ver"), ms); }; })();
+
+async function precargar(){
+  if(!("caches" in window)) return;
+  try{
+    const claves = await caches.keys();
+    await Promise.all(claves.filter(k=>k.startsWith("mi-comunicador-media-") && k!==MEDIA_CACHE).map(k=>caches.delete(k)));
+    const cache = await caches.open(MEDIA_CACHE);
+    const lista = [...new Set(CATEGORIAS.flatMap(c=>c.items.flatMap(i=>[i.img,i.video])).filter(Boolean))]
+                    .map(u=> new URL(u, location.href).href);
+    const faltan = [];
+    for(const u of lista){ if(!(await cache.match(u,{ignoreVary:true}))) faltan.push(u); }
+    if(!faltan.length) return;
+    if(!navigator.onLine){ return; }
+    let hechos = 0; const fallos = [];
+    aviso(`⬇️ Guardando para usar sin internet… 0/${faltan.length}`);
+    let sig = 0;
+    const trabajador = async () => {
+      while(sig < faltan.length){
+        const u = faltan[sig++];
+        try{
+          const r = await fetch(u);
+          if(r.ok) await cache.put(u, r); else fallos.push(u);
+        }catch(e){ fallos.push(u); }
+        hechos++; aviso(`⬇️ Guardando para usar sin internet… ${hechos}/${faltan.length}`);
+      }
+    };
+    await Promise.all([trabajador(), trabajador(), trabajador()]);
+    if(fallos.length){
+      console.warn("No se pudieron guardar:", fallos.map(decodeURI));
+      aviso(`⚠️ No se pudieron guardar ${fallos.length} archivos. Revisa sus nombres.`, 9000);
+    }else{
+      aviso("✅ Listo: ya funciona sin internet", 4500);
+    }
+  }catch(e){ console.warn("precarga", e); }
+}
+
+if("serviceWorker" in navigator && /^https?:$/.test(location.protocol)){
+  navigator.serviceWorker.register("sw.js").catch(e=>console.warn("sw", e));
+  navigator.serviceWorker.ready.then(()=>{
+    precargar();
+    try{ if(navigator.storage && navigator.storage.persist) navigator.storage.persist(); }catch(e){}
+  });
+  window.addEventListener("online", precargar);
+}
+window.addEventListener("offline", ()=> aviso("📴 Sin internet: todo sigue funcionando", 3500));
+
+/* Botón «Instalar» */
+let instalador = null;
+const esStandalone = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+const esIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1);
+function mensaje(txt){
+  const v = document.createElement("div"); v.className = "velo";
+  v.innerHTML = `<div class="caja"><p>${txt}</p><button class="nav-btn primary" id="okv">Entendido</button></div>`;
+  document.body.appendChild(v); v.querySelector("#okv").onclick = ()=> v.remove();
+}
+function actualizarInstalar(){
+  const b = $("instalar"); if(!b) return;
+  const mostrar = !esStandalone() && (instalador || esIOS);
+  b.classList.toggle("hide", !mostrar);
+  b.onclick = async () => {
+    if(instalador){
+      instalador.prompt();
+      try{ await instalador.userChoice; }catch(e){}
+      instalador = null; actualizarInstalar();
+    }else{
+      mensaje("Para instalarla en el iPhone o iPad: toca el botón <b>Compartir</b> ⬆️ y elige <b>«Añadir a pantalla de inicio»</b>.");
+    }
+  };
+}
+window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); instalador = e; actualizarInstalar(); });
+window.addEventListener("appinstalled", () => { instalador = null; actualizarInstalar(); aviso("✅ Instalada", 2500); });
+
+/* Todo está definido: ahora sí se dibuja la primera pantalla */
+render();
+</script>
+</body>
+</html>
