@@ -6,6 +6,8 @@
 <meta name="theme-color" content="#ff9ec7">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="application-name" content="Mi Comunicador">
+<meta name="author" content="shadow-vendetta">
+<meta name="copyright" content="© 2026 shadow-vendetta. Todos los derechos reservados.">
 <meta name="apple-mobile-web-app-title" content="Comunicador">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="description" content="Comunicación alternativa con imágenes y señas en LSC. Funciona sin internet.">
@@ -141,11 +143,11 @@
   }
 
   /* ---------- PORTADA ---------- */
-  .portada{position:relative;display:flex;align-items:center;justify-content:center;text-align:center;
+  .portada{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:space-between;text-align:center;
     min-height:calc(100dvh - var(--pad) - var(--bar-h) - env(safe-area-inset-bottom) - 24px);
     transition:transform .45s ease,opacity .45s ease}
   .portada.adios{transform:scale(1.15);opacity:0}
-  .portada .centro{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;gap:clamp(14px,4vh,36px);
+  .portada .centro{flex:1;justify-content:center;position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;gap:clamp(14px,4vh,36px);
     animation:entrar .9s cubic-bezier(.2,1.3,.4,1) backwards}
   @keyframes entrar{from{transform:scale(.5) translateY(40px);opacity:0}}
   .lazo{font-size:clamp(40px,10vh,84px);line-height:1;animation:balanceo 3s ease-in-out infinite;transform-origin:50% 90%}
@@ -199,9 +201,22 @@
     #quick button .qi{width:34px;height:34px;flex:none}
   }
   @media (max-width:600px){ #fs{display:none} }
+  .pie{position:relative;z-index:1;text-align:center;font-weight:600;letter-spacing:.02em;
+    font-size:clamp(12px,3.1vw,16px);color:#8a4a78;padding:18px 12px 4px;line-height:1.35;opacity:.95}
+  .pie .co{display:inline-block;animation:latido 2s ease-in-out infinite}
+  .pie b{font-weight:700;color:#d6358a}
+  .portada .pie{flex:none;width:100%;padding:6px 10px 0}
+  @media (max-height:560px) and (orientation:landscape){
+    .pie{padding-top:10px;font-size:12px}
+    .portada .pie{padding-top:0}
+    .titulo .linea{font-size:clamp(28px,min(8.5vw,14vh),90px)}
+    .titulo .linea.chica{font-size:clamp(22px,min(6vw,10vh),70px)}
+    .portada .centro{gap:clamp(8px,2vh,16px)}
+    .bienvenida{min-height:56px;padding:8px 36px}
+  }
   .portada .inst-abs{position:absolute;top:0;left:0;z-index:2}
-  #estado{position:fixed;left:50%;bottom:calc(var(--bar-h) + env(safe-area-inset-bottom) + 12px);z-index:30;
-    transform:translate(-50%,20px);opacity:0;pointer-events:none;max-width:calc(100vw - 24px);text-align:center;
+  #estado{position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 10px);z-index:30;
+    transform:translate(-50%,-20px);opacity:0;pointer-events:none;max-width:calc(100vw - 24px);text-align:center;
     background:#fff;color:var(--ink);font-weight:600;font-size:clamp(14px,3.4vw,18px);padding:10px 18px;border-radius:999px;
     border:3px solid var(--rosa-claro);box-shadow:var(--shadow);transition:opacity .3s,transform .3s}
   #estado.ver{opacity:1;transform:translate(-50%,0)}
@@ -337,6 +352,12 @@ const RAPIDAS = [
 
 
 
+
+
+
+
+
+
 /* ============================ ESTADO ============================ */
 const app   = document.getElementById("app");
 const quick = document.getElementById("quick");
@@ -405,9 +426,14 @@ function imagen(it){
    #/c/<id>      -> galería de una categoría
    #/c/<id>/<n>  -> pantalla individual
    #/q/<n>       -> expresión rápida (barra de abajo)                                                    */
+const PIE = `<footer class="pie"><span class="co" aria-hidden="true">💖</span> © 2026 <b>shadow-vendetta</b>. Todos los derechos reservados.</footer>`;
 function go(h){ if(location.hash === h) render(); else location.hash = h; }
 
 function render(){
+  dibujar();
+  if(document.body.dataset.vista !== "portada") app.insertAdjacentHTML("beforeend", PIE);
+}
+function dibujar(){
   const h = location.hash || "#/";
   if(h !== actual){ previo = actual; actual = h; }
   const p = h.split("/");
@@ -477,6 +503,7 @@ function vistaPortada(){
         </h1>
         <button class="bienvenida" id="entrar">Bienvenidos <span class="c">💖</span></button>
       </div>
+      ${PIE}
     </section>`;
   activarPantallaCompleta();
   actualizarInstalar();
@@ -691,7 +718,6 @@ window.addEventListener("appinstalled", () => { instalador = null; actualizarIns
 
 /* Todo está definido: ahora sí se dibuja la primera pantalla */
 render();
-
 </script>
 </body>
 </html>
